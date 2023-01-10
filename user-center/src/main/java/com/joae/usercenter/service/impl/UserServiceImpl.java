@@ -2,13 +2,16 @@ package com.joae.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.joae.usercenter.constant.UserConstant;
 import com.joae.usercenter.model.domain.User;
 import com.joae.usercenter.service.UserService;
 import com.joae.usercenter.mapper.UserMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,9 +23,14 @@ import java.util.regex.Pattern;
  * @createDate 2022-12-31 20:59:39
  */
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
+    /**
+     * 盐值，混淆密码
+     */
 
+    private static final String SALT = "joae";
 
     /**
      * 用户注册
@@ -32,7 +40,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return
      */
     @Override
+
     public long userRegister(String userAccount, String userPassword, String checkPassword) {
+        //校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             return -1;
         }
@@ -55,7 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return -1;
         }
 
-        //        账户不能重复
+        // 账户不能重复
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("userAccount", userAccount);
         long count = this.count(queryWrapper);
@@ -64,7 +74,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         //加密
-        final String SALT = "joae";
         String newPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
 
         //插入数据
@@ -76,6 +85,66 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return -1;
         }
         return user.getId();
+    }
+
+    @Override
+    public User userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+        //校验
+        if (StringUtils.isAnyBlank(userAccount, userPassword)) {
+            return null;
+        }
+        if (userAccount.length() < 4) {
+            return null;
+        }
+        if (userPassword.length() < 8 ) {
+            return null;
+        }
+
+//        不包含特殊字符
+        String validPattern = "[`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
+        Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
+        if (matcher.find()) {
+            return null;
+        }
+
+        // 校验密码
+        String newPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userAccount", userAccount);
+        queryWrapper.eq("userPassword",newPassword);
+        User user = this.getOne(queryWrapper);
+        if(user==null){
+            log.info("Login failed, account can't match password");
+            return null;
+        }
+        User safeUser = getSaftyUser(user);
+
+        //记录用户的登录态
+        request.getSession().setAttribute(UserConstant.LOGIN_STATE,safeUser);
+        return safeUser;
+    }
+
+    /**
+     * 用户脱敏
+     *
+     * @param originUser
+     * @return
+     */
+    @Override
+    public User getSaftyUser(User originUser){
+        //用户信息脱敏
+        User safeUser = new User();
+        safeUser.setId(originUser.getId());
+        safeUser.setUsername(originUser.getUsername());
+        safeUser.setUserAccount(originUser.getUserAccount());
+        safeUser.setAvatarUrl(originUser.getAvatarUrl());
+        safeUser.setGender(originUser.getGender());
+        safeUser.setPhone(originUser.getPhone());
+        safeUser.setEmail(originUser.getEmail());
+        safeUser.setUserRole(originUser.getUserRole());
+        safeUser.setUserStatus(0);
+        safeUser.setCreateTime(originUser.getCreateTime());
+        return safeUser;
     }
 }
 

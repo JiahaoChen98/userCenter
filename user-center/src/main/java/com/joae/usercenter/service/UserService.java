@@ -2,6 +2,9 @@ package com.joae.usercenter.service;
 
 import com.joae.usercenter.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.http.HttpRequest;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
 * @author 13666
@@ -9,6 +12,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 * @createDate 2022-12-31 20:59:39
 */
 public interface UserService extends IService<User> {
+
+
 
     /**
      * 用户注册
@@ -20,4 +25,13 @@ public interface UserService extends IService<User> {
      */
     public long userRegister(String userAccount,String userPassword,String checkPassword);
 
+    User userLogin(String userAccount, String userPassword, HttpServletRequest request);
+
+    /**
+     * 用户脱敏
+     *
+     * @param originUser
+     * @return
+     */
+    User getSaftyUser(User originUser);
 }
