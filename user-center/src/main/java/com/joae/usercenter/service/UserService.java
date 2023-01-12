@@ -23,7 +23,7 @@ public interface UserService extends IService<User> {
      * @param checkPassword 校验密码
      * @return 新用户id
      */
-    public long userRegister(String userAccount,String userPassword,String checkPassword);
+    public long userRegister(String userAccount,String userPassword,String checkPassword,String studentNumber);
 
     User userLogin(String userAccount, String userPassword, HttpServletRequest request);
 
@@ -34,4 +34,7 @@ public interface UserService extends IService<User> {
      * @return
      */
     User getSaftyUser(User originUser);
+
+    int userLogout(HttpServletRequest request);
+
 }

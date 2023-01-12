@@ -2,7 +2,9 @@ package com.joae.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.joae.usercenter.common.ErrorCode;
 import com.joae.usercenter.constant.UserConstant;
+import com.joae.usercenter.exception.BusinessException;
 import com.joae.usercenter.model.domain.User;
 import com.joae.usercenter.service.UserService;
 import com.joae.usercenter.mapper.UserMapper;
@@ -37,20 +39,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param userAccount 账户
      * @param userPassword 用户密码
      * @param checkPassword 校验密码
+     * @param studentNumber 学号
      * @return
      */
     @Override
 
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword,String studentNumber) {
         //校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            return -1;
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword,studentNumber)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"参数为空");
         }
         if (userAccount.length() < 4) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"用户账户小于4为");
         }
         if (userPassword.length() < 8 || checkPassword.length() < 8) {
-            return -1;
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"用户密码小于8位");
+        }
+        if(studentNumber.length()!=6){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"学号不对");
         }
 
 //        不包含特殊字符
@@ -72,6 +78,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (count > 0) {
             return -1;
         }
+        // 学号不能重复
+        queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("studentNumber", studentNumber);
+        count = this.count(queryWrapper);
+        if (count > 0) {
+            return -1;
+        }
 
         //加密
         String newPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
@@ -80,6 +93,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUserAccount(userAccount);
         user.setUserPassword(newPassword);
+        user.setStudentNumber(studentNumber);
         boolean saveResult = this.save(user);
         if(!saveResult){
             return -1;
@@ -133,6 +147,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public User getSaftyUser(User originUser){
         //用户信息脱敏
+        if(originUser==null){
+            return null;
+        }
         User safeUser = new User();
         safeUser.setId(originUser.getId());
         safeUser.setUsername(originUser.getUsername());
@@ -144,7 +161,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setUserRole(originUser.getUserRole());
         safeUser.setUserStatus(0);
         safeUser.setCreateTime(originUser.getCreateTime());
+        safeUser.setStudentNumber(originUser.getStudentNumber());
         return safeUser;
+    }
+
+    /**
+     * 用户退出
+     * @param request
+     */
+    @Override
+    public int userLogout(HttpServletRequest request) {
+        request.getSession().removeAttribute(UserConstant.LOGIN_STATE);
+        return 1;
     }
 }
 
