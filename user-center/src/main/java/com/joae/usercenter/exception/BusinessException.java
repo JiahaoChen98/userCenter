@@ -10,6 +10,7 @@ import com.joae.usercenter.common.ErrorCode;
 
 public class BusinessException extends RuntimeException{
     private final int code;
+    private final String description;
 
     public int getCode() {
         return code;
@@ -18,8 +19,6 @@ public class BusinessException extends RuntimeException{
     public String getDescription() {
         return description;
     }
-
-    private final String description;
 
     public BusinessException(String message, int code, String description) {
         super(message);

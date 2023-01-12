@@ -72,7 +72,7 @@ public class UserController {
         Object attribute = request.getSession().getAttribute(UserConstant.LOGIN_STATE);
         User currentUser = (User) attribute;
         if(currentUser==null){
-            return null;
+            throw new BusinessException(ErrorCode.NO_LOGIN);
         }
         long userId = currentUser.getId();
         //todo 校验用户是否合法
